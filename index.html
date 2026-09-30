@@ -177,7 +177,7 @@ function renderAll(){
 function renderList(){
   const arr = (DATA.staffData && DATA.staffData[currentCategory]) || [];
   const displayName = CATEGORY_MAP[currentCategory] || currentCategory;
-  $('currentCategoryTitle').innerHTML = '<i class="fas fa-users"></i> '+esc(displayName)+' · 店员';
+  $('currentCategoryTitle').innerHTML = '<i class="fas fa-users"></i> '+esc(displayName);
 
   if(arr.length===0){
     $('staffList').innerHTML = '<div class="empty-state"><i class="fas fa-user-slash" style="font-size:2rem;margin-bottom:12px;display:block;"></i>暂无店员</div>';
