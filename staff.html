@@ -32,6 +32,8 @@ body{background:#f7f3ee;display:flex;flex-direction:column;align-items:center;mi
 .switch input:checked + .slider::before{transform:translateX(22px);}
 .switch-label{font-size:.75rem;font-weight:600;color:#8a7663;min-width:32px;text-align:right;}
 .switch-label.on{color:#2b6e2b;}
+.cal-btn{background:#f6f0e8;border:1px solid #d9c7b0;color:#6d5a45;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.9rem;flex-shrink:0;}
+.cal-btn:hover{background:#efe6d9;}
 .save-status{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);background:#3a332c;color:#fff;padding:12px 24px;border-radius:30px;font-size:.88rem;font-weight:600;z-index:9999;box-shadow:0 8px 20px rgba(0,0,0,.2);transition:.25s;}
 .save-status.show{transform:translateX(-50%) translateY(0);}
 .save-status.saving{background:#8a6d3b;}
@@ -40,6 +42,28 @@ body{background:#f7f3ee;display:flex;flex-direction:column;align-items:center;mi
 .loading{text-align:center;padding:60px;color:#a8907a;}
 .error-box{background:#f8d7da;color:#a12b35;padding:16px;border-radius:12px;margin-bottom:20px;font-size:.9rem;}
 .no-staff{text-align:center;padding:48px 16px;color:#b8a48e;font-size:.9rem;}
+.modal-overlay{position:fixed;inset:0;background:rgba(40,33,26,.55);display:flex;align-items:center;justify-content:center;z-index:1000;padding:16px;}
+.modal-box{background:#fffdfa;border-radius:24px;max-width:560px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,.3);overflow:hidden;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid #f0e7df;background:#fcf9f6;}
+.modal-title{font-size:1.1rem;font-weight:700;color:#2e2a24;display:flex;align-items:center;gap:8px;}
+.modal-close{background:transparent;border:none;font-size:1.5rem;color:#8a7663;cursor:pointer;padding:4px 10px;border-radius:8px;line-height:1;}
+.modal-body{padding:16px 20px;overflow-y:auto;}
+.cal-legend{display:flex;gap:14px;margin-bottom:14px;font-size:.8rem;color:#8a7663;flex-wrap:wrap;}
+.cal-legend .leg{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;}
+.cal-legend .leg.present{background:#dff0d8;color:#2b6e2b;}
+.cal-legend .leg.absent{background:#f8d7da;color:#a12b35;}
+.cal-legend .leg.no-record{background:#f0e7df;color:#8a7663;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-day{background:#fcf9f6;border:1px solid #f0e7df;border-radius:8px;padding:8px 4px;text-align:center;font-size:.72rem;}
+.cal-day.present{background:#dff0d8;border-color:#b1d8a8;color:#2b6e2b;}
+.cal-day.absent{background:#f8d7da;border-color:#f1b0b7;color:#a12b35;}
+.cal-day.no-record{opacity:.55;}
+.cal-date{font-weight:700;margin-bottom:2px;}
+.cal-week{color:#8a7663;font-size:.65rem;margin-bottom:3px;}
+.cal-status{font-weight:700;font-size:.9rem;}
+.cal-summary{background:#f6f0e8;padding:10px 14px;border-radius:10px;margin-bottom:14px;font-size:.85rem;color:#5e4b3a;display:flex;justify-content:space-around;text-align:center;}
+.cal-summary div{font-weight:700;}
+.cal-summary .num{font-size:1.2rem;color:#3a332c;display:block;}
 </style>
 </head>
 <body>
@@ -127,6 +151,9 @@ function render(){
       html += '<label class="switch"><input type="checkbox" data-key="'+esc(key)+'" data-idx="'+idx+'" '+checked+'><span class="slider"></span></label>';
       html += '<span class="switch-label '+labelCls+'">'+labelText+'</span>';
       html += '</div>';
+      if(staff.secret){
+        html += '<button class="cal-btn" data-cal-secret="'+esc(staff.secret)+'" data-cal-name="'+esc(staff.name)+'"><i class="fas fa-calendar-alt"></i></button>';
+      }
       html += '</div>';
     });
     html += '</div>';
@@ -152,6 +179,81 @@ function render(){
       scheduleSave();
     };
   });
+
+  $('content').querySelectorAll('.cal-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      openCalendar(btn.dataset.calSecret, btn.dataset.calName);
+    };
+  });
+}
+
+function openCalendar(secret, name){
+  let staff = null;
+  for(const key of Object.keys(DATA.staffData)){
+    const found = DATA.staffData[key].find(s => s.secret === secret);
+    if(found){ staff = found; break; }
+  }
+  if(!staff) return;
+
+  const log = staff.attendanceLog || {};
+  const now = new Date();
+  const chinaTime = new Date(now.getTime() + 8*60*60*1000);
+
+  // 统计
+  let presentCount = 0, absentCount = 0;
+  for(let i = 0; i < 30; i++){
+    const d = new Date(chinaTime.getTime() - i*24*60*60*1000);
+    const ds = d.toISOString().slice(0,10);
+    if(ds in log){
+      if(log[ds]) presentCount++;
+      else absentCount++;
+    }
+  }
+
+  // 日历格
+  let daysHtml = '';
+  for(let i = 29; i >= 0; i--){
+    const d = new Date(chinaTime.getTime() - i*24*60*60*1000);
+    const dateStr = d.toISOString().slice(0,10);
+    const weekdays = ['日','一','二','三','四','五','六'];
+    const hasRecord = dateStr in log;
+    const isPresent = log[dateStr];
+    const cls = hasRecord ? (isPresent ? 'present' : 'absent') : 'no-record';
+    daysHtml += '<div class="cal-day '+cls+'">';
+    daysHtml += '<div class="cal-date">'+(d.getMonth()+1)+'/'+d.getDate()+'</div>';
+    daysHtml += '<div class="cal-week">周'+weekdays[d.getDay()]+'</div>';
+    daysHtml += '<div class="cal-status">'+(hasRecord ? (isPresent ? '✓' : '✗') : '—')+'</div>';
+    daysHtml += '</div>';
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML =
+    '<div class="modal-box">'+
+    '<div class="modal-header">'+
+    '<div class="modal-title"><i class="fas fa-calendar-alt"></i> '+esc(name)+' · 最近 30 天</div>'+
+    '<button class="modal-close">&times;</button>'+
+    '</div>'+
+    '<div class="modal-body">'+
+    '<div class="cal-summary">'+
+    '<div><span class="num">'+(presentCount+absentCount)+'</span>天有记录</div>'+
+    '<div><span class="num" style="color:#2b6e2b;">'+presentCount+'</span>出勤</div>'+
+    '<div><span class="num" style="color:#a12b35;">'+absentCount+'</span>休息</div>'+
+    '</div>'+
+    '<div class="cal-legend">'+
+    '<span class="leg present">✓ 出勤</span>'+
+    '<span class="leg absent">✗ 休息</span>'+
+    '<span class="leg no-record">— 无记录</span>'+
+    '</div>'+
+    '<div class="cal-grid">'+daysHtml+'</div>'+
+    '</div>'+
+    '</div>';
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.querySelector('.modal-close').onclick = close;
+  overlay.onclick = e => { if(e.target === overlay) close(); };
 }
 
 function scheduleSave(){
