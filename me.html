@@ -152,7 +152,7 @@ async function load(){
       }
     }
     if(!found){
-      $('content').innerHTML = '<div class="error-box"><i class="fas fa-times-circle"></i> 访问码无效<br><small>请联系店长获取新链接</small></div>';
+      $('content').innerHTML = '<div class="error-box"><i class="fas fa-times-circle"></i> 访问码无效<br><small>请联系管理员获取新链接</small></div>';
       return;
     }
     render();
@@ -171,7 +171,7 @@ function render(){
   const canEditResources = !!cfg;
 
   let html = '';
-  html += '<div class="notice"><i class="fas fa-info-circle"></i> 你只能修改自己的资料。名字和职位由店长管理，如需更改请联系店长。</div>';
+  html += '<div class="notice"><i class="fas fa-info-circle"></i> 你只能修改自己的资料。名字和职位由管理员编辑，如需更改请联系管理。</div>';
 
   const photoHtml = me.photo
     ? '<img src="'+esc(me.photo)+'" alt="">'
