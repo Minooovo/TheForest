@@ -101,7 +101,7 @@ linear-gradient(#b8a48e,#b8a48e) right 4px bottom 4px/2px 16px no-repeat;}
   </div>
 
   <div class="list-header">
-    <h2 id="currentCategoryTitle"><i class="fas fa-users"></i> 轻无树洞 · 店员</h2>
+    <h2 id="currentCategoryTitle"><i class="fas fa-users"></i> 轻无树洞</h2>
   </div>
 
   <div class="staff-list" id="staffList">
@@ -110,10 +110,8 @@ linear-gradient(#b8a48e,#b8a48e) right 4px bottom 4px/2px 16px no-repeat;}
 </div>
 
 <script>
-const BIN_ID = '6abce361ffd5d160533e9bc5';
-const API = 'https://api.jsonbin.io/v3/b/' + BIN_ID + '/latest';
+const WORKER = 'https://forest-api.evava-shen.workers.dev';
 
-// 分类的 key 与显示名称映射
 const CATEGORY_MAP = {
   '轻无树洞': '轻无树洞',
   '游戏主持': '游戏主持',
@@ -122,7 +120,6 @@ const CATEGORY_MAP = {
   'STAFF': '前台&店长'
 };
 
-// 歌单/例图/游戏单 按钮配置（按 JSON key 匹配）
 const RESOURCE_CFG = {
   '歌手': {btn:'歌单',icon:'fa-music',title:'歌单'},
   '画手': {btn:'例图',icon:'fa-image',title:'例图 & 价目表'},
@@ -137,10 +134,10 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 async function load(){
   try{
-    const res = await fetch(API, {cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    const res = await fetch(WORKER + '/data', {cache:'no-store'});
     const json = await res.json();
-    DATA = json.record;
+    if(!json.ok) throw new Error(json.error || '加载失败');
+    DATA = json.data;
     renderAll();
   }catch(e){
     $('staffList').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>数据加载失败<br><small>'+esc(e.message)+'</small></div>';
@@ -148,9 +145,7 @@ async function load(){
 }
 
 function renderAll(){
-  // 店名
   $('shopName').textContent = DATA.shopName || 'The Forest';
-  // 营业状态
   const bs = $('bizStatus');
   if(DATA.isOpen){
     bs.className = 'biz-status open';
@@ -159,7 +154,6 @@ function renderAll(){
     bs.className = 'biz-status closed';
     bs.innerHTML = '<i class="fas fa-door-closed"></i> 已打烊';
   }
-  // 信息条：营业时间 → 客群 → 招募
   let infoHtml = '';
   if(DATA.Openinghours){
     infoHtml += '<div class="info-item"><i class="fas fa-clock"></i><div class="info-content"><span class="info-label">营业时间：</span>'+esc(DATA.Openinghours)+'</div></div>';
@@ -256,7 +250,6 @@ function openResourceModal(staffId){
   overlay.onclick = e => { if(e.target===overlay) close(); };
 }
 
-// 分类切换
 document.getElementById('categoryGrid').addEventListener('click', e=>{
   const btn = e.target.closest('.category-btn');
   if(!btn) return;
