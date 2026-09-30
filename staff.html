@@ -13,6 +13,16 @@ body{background:#f7f3ee;display:flex;flex-direction:column;align-items:center;mi
 .header h1{font-size:1.8rem;color:#2e2a24;font-family:Georgia,serif;margin-bottom:6px;}
 .header p{font-size:.9rem;color:#8a7663;}
 .header .today{display:inline-block;margin-top:10px;background:#f1ebe4;color:#5e4b3a;padding:6px 16px;border-radius:30px;font-size:.85rem;font-weight:600;}
+.biz-toggle-wrap{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:14px;background:#fcf9f6;border:1px solid #f0e7df;border-radius:30px;padding:8px 16px;width:fit-content;margin-left:auto;margin-right:auto;}
+.biz-label{font-size:.95rem;font-weight:700;color:#8a7663;}
+.biz-label.open{color:#2b6e2b;}
+.biz-label.closed{color:#a12b35;}
+.biz-switch{position:relative;display:inline-block;width:52px;height:30px;cursor:pointer;flex-shrink:0;}
+.biz-switch input{opacity:0;width:0;height:0;}
+.biz-switch .slider{position:absolute;inset:0;background:#d6cdc0;border-radius:30px;transition:.2s;}
+.biz-switch .slider::before{content:'';position:absolute;height:22px;width:22px;left:4px;bottom:4px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2);}
+.biz-switch input:checked + .slider{background:#7cae6b;}
+.biz-switch input:checked + .slider::before{transform:translateX(22px);}
 .cat-block{margin-bottom:24px;}
 .cat-title{font-size:1rem;font-weight:700;color:#6d5c4a;margin-bottom:10px;display:flex;align-items:center;gap:8px;border-left:4px solid #c9b8a3;padding-left:12px;}
 .staff-row{display:flex;align-items:center;gap:14px;background:#fcf9f6;border:1px solid #f0e7df;border-radius:14px;padding:12px 14px;margin-bottom:8px;transition:.15s;}
@@ -72,6 +82,13 @@ body{background:#f7f3ee;display:flex;flex-direction:column;align-items:center;mi
     <h1>The Forest</h1>
     <p>今日出勤打卡</p>
     <div class="today" id="todayDate">加载中...</div>
+    <div class="biz-toggle-wrap">
+      <span class="biz-label" id="bizLabel">加载中...</span>
+      <label class="biz-switch">
+        <input type="checkbox" id="bizToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
   </div>
   <div id="content">
     <div class="loading"><i class="fas fa-spinner fa-spin"></i> 正在加载数据...</div>
@@ -110,6 +127,43 @@ function toast(text, cls){
   if(cls === 'saved' || cls === 'error') setTimeout(()=>el.classList.remove('show'), 2000);
 }
 
+// ========== 营业状态开关 ==========
+function renderBizToggle(){
+  const toggle = $('bizToggle');
+  const label = $('bizLabel');
+  if(!DATA || !toggle || !label) return;
+
+  toggle.checked = DATA.isOpen;
+  label.textContent = DATA.isOpen ? '营业中' : '已打烊';
+  label.className = 'biz-label ' + (DATA.isOpen ? 'open' : 'closed');
+
+  toggle.onchange = async ()=>{
+    const newState = toggle.checked;
+    const oldState = DATA.isOpen;
+
+    DATA.isOpen = newState;
+    label.textContent = newState ? '营业中' : '已打烊';
+    label.className = 'biz-label ' + (newState ? 'open' : 'closed');
+
+    try{
+      const res = await fetch(WORKER + '/toggle-open', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ isOpen: newState })
+      });
+      const json = await res.json();
+      if(!json.ok) throw new Error(json.error || '切换失败');
+      toast(newState ? '已开启营业' : '已打烊', 'saved');
+    }catch(e){
+      DATA.isOpen = oldState;
+      toggle.checked = oldState;
+      label.textContent = oldState ? '营业中' : '已打烊';
+      label.className = 'biz-label ' + (oldState ? 'open' : 'closed');
+      toast('切换失败：'+e.message, 'error');
+    }
+  };
+}
+
 async function load(){
   try{
     const res = await fetch(WORKER + '/data', {cache:'no-store'});
@@ -118,6 +172,7 @@ async function load(){
     DATA = json.data;
     DATA.staffData = DATA.staffData || {};
     render();
+    renderBizToggle();
   }catch(e){
     $('content').innerHTML = '<div class="error-box">加载失败：'+esc(e.message)+'</div>';
   }
@@ -200,7 +255,6 @@ function openCalendar(secret, name){
   const now = new Date();
   const chinaTime = new Date(now.getTime() + 8*60*60*1000);
 
-  // 统计
   let presentCount = 0, absentCount = 0;
   for(let i = 0; i < 30; i++){
     const d = new Date(chinaTime.getTime() - i*24*60*60*1000);
@@ -211,7 +265,6 @@ function openCalendar(secret, name){
     }
   }
 
-  // 日历格
   let daysHtml = '';
   for(let i = 29; i >= 0; i--){
     const d = new Date(chinaTime.getTime() - i*24*60*60*1000);
