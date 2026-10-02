@@ -79,12 +79,15 @@ linear-gradient(#b8a48e,#b8a48e) right 4px bottom 4px/2px 16px no-repeat;}
 .category-btn{font-size:.78rem;padding:12px 4px;}
 .category-btn i{font-size:1.2rem;}
 }
+.shop-address{font-size:.9rem;color:#8a7663;margin-top:6px;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.shop-address i{color:#a8907a;font-size:.85rem;}
 </style>
 </head>
 <body>
 <div class="app-wrapper">
   <div class="shop-header">
     <div class="shop-name" id="shopName">The Forest</div>
+    <div class="shop-address" id="shopAddress"></div>
     <div class="status-area">
       <span class="biz-status open" id="bizStatus"><i class="fas fa-door-open"></i> 营业中</span>
     </div>
@@ -146,6 +149,10 @@ async function load(){
 
 function renderAll(){
   $('shopName').textContent = DATA.shopName || 'The Forest';
+  const addrEl = $('shopAddress');
+  if(addrEl){
+    addrEl.innerHTML = DATA.address ? '<i class="fas fa-map-marker-alt"></i> ' + esc(DATA.address) : '';
+  }
   const bs = $('bizStatus');
   if(DATA.isOpen){
     bs.className = 'biz-status open';
