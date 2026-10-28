@@ -81,6 +81,16 @@ linear-gradient(#b8a48e,#b8a48e) right 4px bottom 4px/2px 16px no-repeat;}
 }
 .shop-address{font-size:.9rem;color:#8a7663;margin-top:6px;letter-spacing:.3px;display:flex;align-items:center;justify-content:center;gap:6px;}
 .shop-address i{color:#a8907a;font-size:.85rem;}
+.category-grid{grid-template-columns:repeat(7,1fr);}
+@media(max-width:768px){.category-grid{grid-template-columns:repeat(4,1fr);}}
+@media(max-width:480px){.category-grid{grid-template-columns:repeat(3,1fr);}}
+.group-photo-section{width:100%;margin:20px 0 10px;background:#fcf9f6;border:1px solid #f0e7df;border-radius:20px;padding:16px;text-align:center;}
+.group-photo-title{font-size:.95rem;font-weight:700;color:#6d5c4a;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;}
+.group-photo-img{max-width:100%;border-radius:12px;border:1px solid #e6dbc9;display:block;margin:0 auto;}
+.group-photo-empty{color:#b8a48e;font-size:.85rem;padding:20px;}
+.modal-text{background:#f6f0e8;border-radius:12px;padding:16px 18px;border:1px solid #e6dbc9;}
+.modal-text-label{font-size:.82rem;font-weight:700;color:#8a7663;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+.modal-text-content{color:#4e443b;font-size:.95rem;line-height:1.6;white-space:pre-wrap;word-break:break-word;}
 </style>
 </head>
 <body>
@@ -94,12 +104,18 @@ linear-gradient(#b8a48e,#b8a48e) right 4px bottom 4px/2px 16px no-repeat;}
   </div>
 
   <div class="info-strip" id="infoStrip"></div>
+  <div class="group-photo-section" id="groupPhotoSection" style="display:none;">
+    <div class="group-photo-title"><i class="fas fa-users"></i> 全体店员合照</div>
+    <div id="groupPhotoContent"></div>
+  </div>
 
   <div class="category-grid" id="categoryGrid">
     <button class="category-btn active" data-category="轻无树洞"><i class="fas fa-tree"></i> 轻无树洞</button>
     <button class="category-btn" data-category="游戏主持"><i class="fas fa-gamepad"></i> 游戏主持</button>
     <button class="category-btn" data-category="歌手"><i class="fas fa-microphone-alt"></i> 歌手</button>
     <button class="category-btn" data-category="画手"><i class="fas fa-paint-brush"></i> 画手</button>
+    <button class="category-btn" data-category="占卜"><i class="fas fa-moon"></i> 占卜</button>
+    <button class="category-btn" data-category="摄影"><i class="fas fa-camera"></i> 摄影</button>
     <button class="category-btn" data-category="STAFF"><i class="fas fa-concierge-bell"></i> 前台&店长</button>
   </div>
 
@@ -120,13 +136,17 @@ const CATEGORY_MAP = {
   '游戏主持': '游戏主持',
   '歌手': '歌手',
   '画手': '画手',
+  '占卜': '占卜',
+  '摄影': '摄影',
   'STAFF': '前台&店长'
 };
 
 const RESOURCE_CFG = {
   '歌手': {btn:'歌单',icon:'fa-music',title:'歌单'},
   '画手': {btn:'例图',icon:'fa-image',title:'例图 & 价目表'},
-  '游戏主持': {btn:'游戏单',icon:'fa-dice',title:'游戏单'}
+  '游戏主持': {btn:'游戏单',icon:'fa-dice',title:'游戏单'},
+  '占卜': {btn:'占卜图',icon:'fa-moon',title:'占卜详情'},
+  '摄影': {btn:'作品集',icon:'fa-camera',title:'摄影作品'}
 };
 
 let DATA = null;
@@ -172,6 +192,17 @@ function renderAll(){
     infoHtml += '<div class="info-item"><i class="fas fa-bullhorn"></i><div class="info-content"><span class="info-label">招募：</span>'+esc(DATA.recruitInfo)+'</div></div>';
   }
   $('infoStrip').innerHTML = infoHtml;
+    // 全体合照
+  const gps = $('groupPhotoSection');
+  const gpc = $('groupPhotoContent');
+  if(gps && gpc){
+    if(DATA.groupPhoto){
+      gps.style.display = 'block';
+      gpc.innerHTML = '<img class="group-photo-img" src="'+esc(DATA.groupPhoto)+'" alt="全体店员合照">';
+    }else{
+      gps.style.display = 'none';
+    }
+  }
   renderList();
 }
 
