@@ -121,14 +121,63 @@ function getSecret(){
 }
 
 async function uploadToCloudinary(file){
+  // 如果文件 > 10MB，先压缩
+  let uploadFile = file;
+  if(file.size > 10 * 1024 * 1024){
+    status('图片过大，正在压缩...', 'saving');
+    uploadFile = await compressImage(file, 2000, 0.85);
+    status('压缩完成，开始上传...', 'saving');
+  }
+
   const url = 'https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload';
   const fd = new FormData();
-  fd.append('file', file);
+  fd.append('file', uploadFile);
   fd.append('upload_preset', UPLOAD_PRESET);
-  const res = await fetch(url, {method:'POST', body: fd});
-  if(!res.ok) throw new Error('上传失败：'+res.status);
+  const res = await fetch(url, { method:'POST', body: fd });
+  if(!res.ok){
+    const txt = await res.text();
+    throw new Error('上传失败：'+res.status+' '+txt);
+  }
   const json = await res.json();
   return json.secure_url || json.url;
+}
+
+// 图片压缩工具（Canvas 实现，无需外部库）
+function compressImage(file, maxSide = 2000, quality = 0.85){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      // 等比缩放
+      if(width > maxSide || height > maxSide){
+        if(width > height){
+          height = Math.round(height * maxSide / width);
+          width = maxSide;
+        }else{
+          width = Math.round(width * maxSide / height);
+          height = maxSide;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(blob=>{
+        if(!blob){ reject(new Error('压缩失败')); return; }
+        // 转成 File 对象
+        const newFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        });
+        resolve(newFile);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('图片加载失败')); };
+    img.src = url;
+  });
 }
 
 async function load(){
@@ -197,6 +246,7 @@ function render(){
     html += '<div class="add-res-bar">';
     html += '<button id="addImgBtn"><i class="fas fa-image"></i> 上传图片</button>';
     html += '<button id="addLinkBtn"><i class="fas fa-link"></i> 加链接</button>';
+    html += '<button id="addTextBtn"><i class="fas fa-font"></i> 加文字</button>';
     html += '</div></div>';
   }
 
@@ -293,6 +343,17 @@ function render(){
       renderResources();
       status('已添加，记得点保存','saved');
     };
+    $('addTextBtn').onclick = ()=>{
+      const label = prompt('给这段文字起个标题：','文字');
+      if(label===null) return;
+      const content = prompt('输入文字内容（可用换行）：','');
+      if(content===null || !content.trim()) return;
+      const me = getMe();
+      me.resources = me.resources || [];
+      me.resources.push({type:'text', content:content, label:label||'文字'});
+      renderResources();
+      status('已添加，记得点保存','saved');
+    };
   }
 }
 
@@ -314,6 +375,9 @@ function renderResources(){
       if(r.data) html += '<img src="'+esc(r.data)+'" alt="">';
       else html += '<div style="width:60px;height:60px;background:#f0e7df;border-radius:6px;"></div>';
       html += '<div class="res-info"><div class="res-label">'+esc(r.label||'未命名')+'</div><div class="res-url">图片</div></div>';
+    }else if(r.type === 'text'){
+      html += '<i class="fas fa-font" style="color:#a8907a;font-size:1.2rem;"></i>';
+      html += '<div class="res-info"><div class="res-label">'+esc(r.label||'文字')+'</div><div class="res-url" style="white-space:pre-wrap;">'+esc(r.content||'')+'</div></div>';
     }else{
       html += '<i class="fas fa-link" style="color:#a8907a;font-size:1.2rem;"></i>';
       html += '<div class="res-info"><div class="res-label">'+esc(r.label||'')+'</div><div class="res-url">'+esc(r.url||'')+'</div></div>';
