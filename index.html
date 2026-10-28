@@ -105,7 +105,6 @@ linear-gradient(#b8a48e,#b8a48e) right 4px bottom 4px/2px 16px no-repeat;}
 
   <div class="info-strip" id="infoStrip"></div>
   <div class="group-photo-section" id="groupPhotoSection" style="display:none;">
-    <div class="group-photo-title"><i class="fas fa-users"></i> 全体店员合照</div>
     <div id="groupPhotoContent"></div>
   </div>
 
@@ -198,13 +197,13 @@ function renderAll(){
   if(gps && gpc){
     if(DATA.groupPhoto){
       gps.style.display = 'block';
-      gpc.innerHTML = '<img class="group-photo-img" src="'+esc(DATA.groupPhoto)+'" alt="全体店员合照">';
+      const title = DATA.groupPhotoTitle || '全体店员合照';
+      gpc.innerHTML = '<div class="group-photo-title"><i class="fas fa-users"></i> '+esc(title)+'</div>'+
+        '<img class="group-photo-img" src="'+esc(DATA.groupPhoto)+'" alt="'+esc(title)+'">';
     }else{
       gps.style.display = 'none';
     }
   }
-  renderList();
-}
 
 function renderList(){
   const arr = (DATA.staffData && DATA.staffData[currentCategory]) || [];
